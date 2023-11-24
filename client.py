@@ -33,8 +33,8 @@ anzeige_tauschen = False
 
 try:
 	mixer.init()
-	sound = mixer.Sound("bing.mp3")
-	schnpas = mixer.Sound("schnaps.mp3")
+	sound = mixer.Sound("bing.wav")
+	schnpas = mixer.Sound("schnaps.wav")
 except:
 	pass
 
