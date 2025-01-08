@@ -8,6 +8,7 @@ import json
 from functools import partial
 
 schnapsszahl = 11
+schnapsaktiv = False # nur für Spassturniere
 #UDP_IP = ["127.0.0.1"]
 UDP_IP = ["127.0.0.1", "192.168.4.1","192.168.1.10"]
 #UDP_IP = "129.13.1"
@@ -103,7 +104,7 @@ class control:
 		if tore2 > 0:
 			tore2-=1
 	def checkSchnaps (self,event=None):
-		if (gesamttore + tore1 + tore2) > 0 and (gesamttore + tore1 + tore2) % schnapsszahl == 0:
+		if schnapsaktiv and (gesamttore + tore1 + tore2) > 0 and (gesamttore + tore1 + tore2) % schnapsszahl == 0:
 			print("Schnapszahl!")
 			ctl.stop()
 			schnapszeit(zahl= gesamttore + tore1 + tore2)
@@ -317,7 +318,6 @@ class control:
 				win3.bind("7", lambda throw_away=0,i=i: ctl.setTime(7))
 				
 				tk.Button(radiobuttonFrame, text='gespeicherte Ergebnisse anzeigen', width=30,padx=10, pady=15, font=('times',20,'bold'),command=ctl.show_games, bg='grey',fg="white" ).grid(row=i+6, column=0,sticky="nsew",padx=10, pady=15)
-				tk.Button(radiobuttonFrame, text='ehealigen Mode', width=30,padx=10, pady=15, font=('times',20,'bold'),command=ctl.show_games, bg='grey',fg="white" ).grid(row=i+6, column=1,sticky="nsew",padx=10, pady=15)
 				tk.Button(radiobuttonFrame, text='übernehmen\n(Leertaste)', width=30,padx=10, pady=15, font=('times',20,'bold'), command=ctl.cls, bg='grey',fg="white" ).grid(row=i+7, column=0,sticky="nsew",padx=10, pady=15)
 				win3.bind('<space>',ctl.cls)
 			tk.Button(radiobuttonFrame, text='Mannschaften definieren\n(F1)',width=30,padx=10, pady=15,  font=('times',20,'bold'), command=ctl.new_teams, bg='grey',fg="white" ).grid(row=i+7, column=1,sticky="nsew",padx=10, pady=15)
@@ -493,7 +493,7 @@ class tick:
 				seconds = rem.seconds % 60
 				clock.config(text=(str(minutes)+":"+str(seconds).rjust(2, '0')), fg = "white")
 				
-				utick.dp_dict ["minutes"] = str(minutes)
+				tick.udp_dict ["minutes"] = str(minutes)
 				tick.udp_dict ["seconds"] = str(seconds).rjust(2, '0')
 		#print("..")
 		udp_send(json.dumps(tick.udp_dict))
