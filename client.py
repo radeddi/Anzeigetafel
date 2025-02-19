@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import time
 import socket
 import json
@@ -31,12 +30,11 @@ except Exception as e:
 time_str = DEFAULT_TIME
 last_data_received = time.monotonic()
 
-# Merkt sich den zuletzt angezeigten Text (Teamnamen),
-# damit wir nur dann neu skalieren, wenn es sich ändert
+# Merkt sich den zuletzt angezeigten Text (Teamnamen)
 prev_team1_text = ""
 prev_team2_text = ""
 
-# Cache für bereits berechnete Fonts, damit nicht jedes Mal neu skaliert wird
+# Cache für bereits berechnete Fonts
 TEAM_FONT_CACHE = {}  # dictionary: text -> tkFont.Font
 
 def reconnect_socket():
@@ -62,7 +60,6 @@ def split_team_name(name: str) -> str:
     """
     slash_index = name.find("/")
     dash_index = name.find("-")
-
     if slash_index != -1:
         return name[:slash_index + 1] + "\n" + name[slash_index + 1:]
     elif dash_index != -1:
@@ -82,23 +79,16 @@ def auto_shrink_font(text: str, max_width: int, base_font_size: int,
     Verkleinert die Schriftgröße so lange, bis 'text' in 'max_width' Pixel passt.
     Nutzt TEAM_FONT_CACHE, damit wir nicht wiederholt berechnen.
     """
-    # Schon im Cache?
     if text in TEAM_FONT_CACHE:
         return TEAM_FONT_CACHE[text]
-
-    # Falls base_font_size negativ ist (pixelbasiert in tkinter),
-    # arbeiten wir intern nur mit dem absoluten Wert.
     size = abs(base_font_size)
     current_font = tkFont.Font(family=font_family, size=-size, weight=weight)
-
     while size >= min_size:
         w = measure_text_width(text, current_font)
         if w <= max_width:
             break
         size -= 1
         current_font.configure(size=-size)
-
-    # Im Cache speichern
     TEAM_FONT_CACHE[text] = current_font
     return current_font
 
@@ -106,20 +96,13 @@ def update_display(data: bytes):
     """Bekommt neue Daten, aktualisiert Zeit, Teamnamen etc."""
     global time_str, last_data_received
     global prev_team1_text, prev_team2_text
-
     try:
         anzeige = json.loads(data)
     except json.JSONDecodeError:
         return
-
-    # Zeitstempel updaten (wir haben gültige Daten)
     last_data_received = time.monotonic()
-
-    # Zeit-Anzeige
     current_time_str = f"{anzeige['minutes']}:{anzeige['seconds']}"
     zeit_anzeige.config(text=current_time_str)
-
-    # bing oder schnaps
     if current_time_str == DEFAULT_TIME and time_str != DEFAULT_TIME:
         time_str = DEFAULT_TIME
         if sound_active:
@@ -131,22 +114,17 @@ def update_display(data: bytes):
             schnaps_sound.play()
     else:
         time_str = current_time_str
-
-    # Teamnamen
     new_team1_text = split_team_name(anzeige.get('team1', ""))
     new_team2_text = split_team_name(anzeige.get('team2', ""))
-
-    # Nur aktualisieren, wenn sich der Text ändert
     if new_team1_text != prev_team1_text:
         font_for_team1 = auto_shrink_font(
             text=new_team1_text,
             max_width=TEAM_LABEL_MAX_WIDTH,
-            base_font_size=small,  # Startgröße (z.B. -108)
+            base_font_size=small,
             min_size=10
         )
         team1_anzeige.config(text=new_team1_text, font=font_for_team1)
         prev_team1_text = new_team1_text
-
     if new_team2_text != prev_team2_text:
         font_for_team2 = auto_shrink_font(
             text=new_team2_text,
@@ -156,46 +134,35 @@ def update_display(data: bytes):
         )
         team2_anzeige.config(text=new_team2_text, font=font_for_team2)
         prev_team2_text = new_team2_text
-
-    # Tore & Next
     tore1_anzeige.config(text=anzeige.get('tore1', ""))
     tore2_anzeige.config(text=anzeige.get('tore2', ""))
     next_anzeige.config(text=anzeige.get('next', ""))
 
 def show():
-    """
-    Liest alle verfügbaren Pakete aus dem Socket (non-blocking) und aktualisiert die Anzeige.
-    Zeigt ein Overlay an, wenn seit >1s keine Daten.
-    """
+    """Liest alle Pakete aus dem Socket, zeigt Overlay bei Timeout und schickt Broadcast."""
     while True:
         try:
             data, addr = sock.recvfrom(1024)
             update_display(data)
         except BlockingIOError:
-            # keine weiteren Pakete
             break
         except Exception as e:
             print(f"Fehler beim Empfang: {e}")
             break
-
     now = time.monotonic()
     if now - last_data_received > 1.0:
-        # Overlay einblenden
-        if overlay.state() == "withdrawn":  # nur falls noch nicht eingeblendet
+        if overlay.state() == "withdrawn":
             overlay.deiconify()
         reconnect_socket()
     else:
-        # Overlay ausblenden
         if overlay.state() != "withdrawn":
             overlay.withdraw()
-
     root.after(50, show)
 
 # ------------------------------------------------------------------------
 # 3) GUI-AUFBAU
 # ------------------------------------------------------------------------
 root = tk.Tk()
-
 monitors = screeninfo.get_monitors()
 if not monitors:
     print("Keine Monitore gefunden, Standardwerte setzen ...")
@@ -204,7 +171,6 @@ else:
     monitor = monitors[0]
     screen_width = monitor.width
     screen_height = monitor.height
-
 if len(monitors) == 1:
     root.configure(bg='black', cursor='none')
     root.attributes("-fullscreen", True)
@@ -212,12 +178,10 @@ else:
     root.geometry(f"{screen_width}x{screen_height}+{monitor.x}+{monitor.y}")
     root.configure(bg='black', cursor='none')
     root.wm_overrideredirect(True)
-
-small = int(-0.15 * screen_height)
-big   = int(-0.28 * screen_height)
+small = int(-0.14 * screen_height)
+big   = int(-0.24 * screen_height)
 pad_x = int(0.03  * screen_height)
 pad_y = int(0.111 * screen_height)
-
 TEAM_LABEL_MAX_WIDTH = int(screen_width * 0.50)
 
 # Hauptelemente
@@ -230,7 +194,6 @@ zeit_anzeige = tk.Label(
 )
 zeit_anzeige.grid(row=2, column=0, columnspan=4, sticky="nsew")
 zeit_anzeige.config(text="no data")
-
 team1_anzeige = tk.Label(
     root, 
     font=('times', small, 'bold'), 
@@ -241,7 +204,6 @@ team1_anzeige = tk.Label(
     anchor='center'
 )
 team1_anzeige.grid(row=0, column=0, columnspan=2, sticky="nsew")
-
 team2_anzeige = tk.Label(
     root, 
     font=('times', small, 'bold'), 
@@ -253,24 +215,25 @@ team2_anzeige = tk.Label(
 )
 team2_anzeige.grid(row=0, column=2, columnspan=2, sticky="nsew")
 
+# Tore-Labels mit zusätzlichem internem Padding (ipady) und zentriertem Inhalt
 tore1_anzeige = tk.Label(
     root, 
     font=('times', big, 'bold'), 
     bg='black', 
-    fg='white', 
-    pady=pad_y
+    fg='white',
+    pady=1.1*pad_y,
+    anchor='center'
 )
 tore1_anzeige.grid(row=1, column=0, columnspan=2, sticky="nsew")
-
 tore2_anzeige = tk.Label(
     root, 
     font=('times', big, 'bold'), 
     bg='black', 
-    fg='white', 
-    pady=pad_y
+    fg='white',
+    pady=1.1*pad_y,
+    anchor='center'
 )
 tore2_anzeige.grid(row=1, column=2, columnspan=2, sticky="nsew")
-
 next_anzeige = tk.Label(
     root, 
     font=('times', small, 'bold'), 
@@ -278,14 +241,16 @@ next_anzeige = tk.Label(
     fg='grey', 
     pady=pad_y
 )
+
+
+
 next_anzeige.grid(row=3, column=0, columnspan=4, sticky="nsew")
 
-# Grid-Konfiguration
+# Grid-Konfiguration (erhöhter Mindestabstand für row 1)
 root.grid_rowconfigure(0, weight=1, minsize=int(0.15 * screen_height))
-root.grid_rowconfigure(1, weight=1, minsize=int(0.15 * screen_height))
+root.grid_rowconfigure(1, weight=1, minsize=int(0.18 * screen_height))  # etwas größer für Tore
 root.grid_rowconfigure(2, weight=1, minsize=int(0.3  * screen_height))
 root.grid_rowconfigure(3, weight=1, minsize=int(0.15 * screen_height))
-
 for c in range(4):
     root.grid_columnconfigure(c, weight=1, minsize=0)
 
@@ -294,18 +259,12 @@ for c in range(4):
 # ------------------------------------------------------------------------
 overlay = tk.Toplevel(root)
 overlay.title("No Data Overlay")
-# Gleiche Größe/Auflösung wie root
 overlay.geometry(f"{screen_width}x{screen_height}+{monitor.x}+{monitor.y}")
 overlay.configure(bg='black')
-# Ganz oben und ohne Rahmen
 overlay.attributes("-topmost", True)
 overlay.overrideredirect(True)
-
-# Falls ein Monitor => fullscreen
 if len(monitors) == 1:
     overlay.attributes("-fullscreen", True)
-
-# Label im Overlay
 overlay_label = tk.Label(
     overlay, 
     text="NO DATA", 
@@ -314,8 +273,6 @@ overlay_label = tk.Label(
     fg='red'
 )
 overlay_label.pack(expand=True, fill=tk.BOTH)
-
-# Start: Overlay ausgeblendet
 overlay.withdraw()
 
 # ------------------------------------------------------------------------
