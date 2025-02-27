@@ -6,6 +6,9 @@ import screeninfo
 import tkinter as tk
 import tkinter.font as tkFont
 from pygame import mixer
+import subprocess
+import sys
+import os
 
 # ------------------------------------------------------------------------
 # 1) KONFIGURATION
@@ -100,6 +103,10 @@ def update_display(data: bytes):
         anzeige = json.loads(data)
     except json.JSONDecodeError:
         return
+    if anzeige.get("update"):
+        update_and_restart()
+
+    
     last_data_received = time.monotonic()
     current_time_str = f"{anzeige['minutes']}:{anzeige['seconds']}"
     zeit_anzeige.config(text=current_time_str)
@@ -138,7 +145,7 @@ def update_display(data: bytes):
     tore2_anzeige.config(text=anzeige.get('tore2', ""))
     next_anzeige.config(text=anzeige.get('next', ""))
     if anzeige.get("status"):
-        if  anzeige["status"] == 2:
+        if anzeige["status"] == 2:
             next_anzeige.grid()
     else:
         next_anzeige.grid_remove()
@@ -165,6 +172,21 @@ def show():
             overlay.withdraw()
     root.after(50, show)
 
+def update_and_restart():
+    """
+    Führt 'git pull' aus und startet das Script neu. 
+    Da diese Funktion per 'root.after' mit 2000ms Delay aufgerufen wird, 
+    werden die Ports freigegeben, bevor das Script neu gestartet wird.
+    """
+    try:
+        subprocess.check_call(["git", "pull"])
+        print("Repository aktualisiert. Starte Script neu...")
+    except subprocess.CalledProcessError as e:
+        print("Fehler beim Aktualisieren des Repositories:", e)
+        return
+    python = sys.executable
+    os.execv(python, [python] + sys.argv)
+
 # ------------------------------------------------------------------------
 # 3) GUI-AUFBAU
 # ------------------------------------------------------------------------
@@ -186,7 +208,6 @@ else:
     root.wm_overrideredirect(True)
 small = int(-0.14 * screen_height)
 smaller = int(-0.08 * screen_height)
-
 big   = int(-0.24 * screen_height)
 pad_x = int(0.03  * screen_height)
 pad_y = int(0.111 * screen_height)
@@ -223,7 +244,7 @@ team2_anzeige = tk.Label(
 )
 team2_anzeige.grid(row=0, column=2, columnspan=2, sticky="nsew")
 
-# Tore-Labels mit zusätzlichem internem Padding (ipady) und zentriertem Inhalt
+# Tore-Labels
 tore1_anzeige = tk.Label(
     root, 
     font=('times', big, 'bold'), 
@@ -249,14 +270,11 @@ next_anzeige = tk.Label(
     fg='grey', 
     pady=pad_y
 )
-
-
-
 next_anzeige.grid(row=3, column=0, columnspan=4, sticky="nsew")
 
-# Grid-Konfiguration (erhöhter Mindestabstand für row 1)
+# Grid-Konfiguration
 root.grid_rowconfigure(0, weight=2, minsize=int(0.15 * screen_height))
-root.grid_rowconfigure(1, weight=1, minsize=int(0.18 * screen_height))  # etwas größer für Tore
+root.grid_rowconfigure(1, weight=1, minsize=int(0.18 * screen_height))
 root.grid_rowconfigure(2, weight=1, minsize=int(0.3  * screen_height))
 root.grid_rowconfigure(3, weight=2, minsize=int(0.15 * screen_height))
 for c in range(4):
@@ -287,4 +305,6 @@ overlay.withdraw()
 # 5) LOOP START
 # ------------------------------------------------------------------------
 root.after(50, show)
+
+
 root.mainloop()
