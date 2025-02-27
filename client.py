@@ -137,6 +137,12 @@ def update_display(data: bytes):
     tore1_anzeige.config(text=anzeige.get('tore1', ""))
     tore2_anzeige.config(text=anzeige.get('tore2', ""))
     next_anzeige.config(text=anzeige.get('next', ""))
+    if anzeige.get("status"):
+        if  anzeige["status"] == 2:
+            next_anzeige.grid()
+    else:
+        next_anzeige.grid_remove()
+        root.grid_rowconfigure(3, weight=1, minsize=0)   
 
 def show():
     """Liest alle Pakete aus dem Socket, zeigt Overlay bei Timeout und schickt Broadcast."""
@@ -168,7 +174,7 @@ if not monitors:
     print("Keine Monitore gefunden, Standardwerte setzen ...")
     screen_width, screen_height = 800, 600
 else:
-    monitor = monitors[0]
+    monitor = monitors[1]
     screen_width = monitor.width
     screen_height = monitor.height
 if len(monitors) == 1:
@@ -179,6 +185,8 @@ else:
     root.configure(bg='black', cursor='none')
     root.wm_overrideredirect(True)
 small = int(-0.14 * screen_height)
+smaller = int(-0.08 * screen_height)
+
 big   = int(-0.24 * screen_height)
 pad_x = int(0.03  * screen_height)
 pad_y = int(0.111 * screen_height)
@@ -236,7 +244,7 @@ tore2_anzeige = tk.Label(
 tore2_anzeige.grid(row=1, column=2, columnspan=2, sticky="nsew")
 next_anzeige = tk.Label(
     root, 
-    font=('times', small, 'bold'), 
+    font=('times', smaller), 
     bg='black', 
     fg='grey', 
     pady=pad_y
@@ -247,10 +255,10 @@ next_anzeige = tk.Label(
 next_anzeige.grid(row=3, column=0, columnspan=4, sticky="nsew")
 
 # Grid-Konfiguration (erhöhter Mindestabstand für row 1)
-root.grid_rowconfigure(0, weight=1, minsize=int(0.15 * screen_height))
+root.grid_rowconfigure(0, weight=2, minsize=int(0.15 * screen_height))
 root.grid_rowconfigure(1, weight=1, minsize=int(0.18 * screen_height))  # etwas größer für Tore
 root.grid_rowconfigure(2, weight=1, minsize=int(0.3  * screen_height))
-root.grid_rowconfigure(3, weight=1, minsize=int(0.15 * screen_height))
+root.grid_rowconfigure(3, weight=2, minsize=int(0.15 * screen_height))
 for c in range(4):
     root.grid_columnconfigure(c, weight=1, minsize=0)
 
