@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
-# Projektverzeichnis (angegeben als Argument oder aktuelles Verzeichnis)
+# Projektverzeichnis: über Argument oder aktuelles Verzeichnis
 PROJECT_DIR="${1:-$(pwd)}"
 
-# Prüfen, ob die nötigen Dateien existieren
+# Überprüfen, ob die nötigen Dateien existieren
 if [ ! -f "$PROJECT_DIR/client.py" ]; then
   echo "Fehler: client.py nicht gefunden in $PROJECT_DIR"
   exit 1
@@ -14,7 +14,7 @@ if [ ! -f "$PROJECT_DIR/requirements.txt" ]; then
   exit 1
 fi
 
-# Bestimmen des Benutzers, unter dem der Service laufen soll
+# Bestimmen des Users für den Service
 if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
   RUN_USER="$SUDO_USER"
 else
@@ -26,13 +26,17 @@ echo "-> Service-User: $RUN_USER"
 
 # Virtuelle Umgebung erstellen und Abhängigkeiten installieren
 python3 -m venv "$PROJECT_DIR/env"
-source "$PROJECT_DIR/env/bin/activate"
+# Aktivieren der venv (POSIX-kompatibel)
+. "$PROJECT_DIR/env/bin/activate"
+# pip aktualisieren und Abhängigkeiten installieren
+pip install --upgrade pip
 pip install -r "$PROJECT_DIR/requirements.txt"
 deactivate
 
-# systemd-Service-Datei erstellen/aktualisieren
-echo "-> Erstelle/aktualisiere Service in /etc/systemd/system/zeitanzeige.service"
-sudo tee /etc/systemd/system/zeitanzeige.service > /dev/null <<EOF
+# systemd-Service-Datei schreiben
+SERVICE_FILE="/etc/systemd/system/zeitanzeige.service"
+echo "-> Erstelle/aktualisiere Service: $SERVICE_FILE"
+sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=My Tkinter App
 After=network.target
@@ -51,10 +55,10 @@ RestartSec=10
 WantedBy=graphical.target
 EOF
 
-# systemd neu laden und Service aktivieren
+# systemd neu laden, aktivieren und Service starten
 sudo systemctl daemon-reload
 sudo systemctl enable zeitanzeige.service
 sudo systemctl restart zeitanzeige.service
 
-echo "-> Setup abgeschlossen. Starte Raspberry Pi neu..."
+echo "-> Setup abgeschlossen. Raspberry Pi wird neu gestartet."
 sudo reboot
