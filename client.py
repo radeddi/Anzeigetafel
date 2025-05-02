@@ -324,7 +324,20 @@ overlay.withdraw()
 # ------------------------------------------------------------------------
 # 5) LOOP START
 # ------------------------------------------------------------------------
+def close_app(event=None):
+    # Schließt Haupt- und Overlay-Fenster
+    try:
+        overlay.destroy()
+    except:
+        pass
+    root.destroy()
+
+# Bind ESC an unsere close_app-Funktion
+root.bind("<Escape>", close_app)
+overlay.bind("<Escape>", close_app)
+
 root.after(50, show)
+
 
 
 root.mainloop()
