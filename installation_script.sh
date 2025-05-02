@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
+# Dieses Skript kann als normaler Benutzer ausgeführt werden.
+# Schreibzugriffe auf /etc und systemctl-Kommandos werden intern mit sudo ausgeführt.
+# Sorge dafür, dass Dein Benutzer sudo-Rechte hat und Du Dein Passwort eingeben kannst.
+
 # Projektverzeichnis: über Argument oder aktuelles Verzeichnis
 PROJECT_DIR="${1:-$(pwd)}"
 
@@ -14,6 +18,16 @@ if [ ! -f "$PROJECT_DIR/requirements.txt" ]; then
   exit 1
 fi
 
+echo "-> Projektverzeichnis: $PROJECT_DIR"
+
+# Prüfen und Ausführen von git pull, falls ein Git-Repo vorhanden ist
+if [ -d "$PROJECT_DIR/.git" ]; then
+  echo "-> Aktualisiere Projekt via git pull"
+  git -C "$PROJECT_DIR" pull --ff-only
+else
+  echo "-> Kein Git-Repository gefunden, überspringe git pull"
+fi
+
 # Bestimmen des Users für den Service
 if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
   RUN_USER="$SUDO_USER"
@@ -21,7 +35,6 @@ else
   RUN_USER=$(stat -c '%U' "$PROJECT_DIR")
 fi
 
-echo "-> Projektverzeichnis: $PROJECT_DIR"
 echo "-> Service-User: $RUN_USER"
 
 # Virtuelle Umgebung erstellen und Abhängigkeiten installieren
@@ -60,5 +73,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable zeitanzeige.service
 sudo systemctl restart zeitanzeige.service
 
-echo "-> Setup abgeschlossen. Raspberry Pi wird neu gestartet."
-sudo reboot
+# Optionaler Neustart -- kann man entfernen, wenn man manuell rebooten möchte
+# echo "-> Setup abgeschlossen. Raspberry Pi wird neu gestartet."
+# sudo reboot
