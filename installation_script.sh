@@ -62,7 +62,7 @@ WorkingDirectory=$PROJECT_DIR
 StandardOutput=inherit
 StandardError=inherit
 Restart=always
-RestartSec=10
+RestartSec=30
 
 [Install]
 WantedBy=graphical.target
