@@ -111,6 +111,9 @@ def update_display(data: bytes):
     current_time_str = f"{anzeige['minutes']}:{anzeige['seconds']}"
     zeit_anzeige.config(text=current_time_str)
     if current_time_str == DEFAULT_TIME and time_str != DEFAULT_TIME:
+        print(current_time_str)
+        print(time_str)
+        print(DEFAULT_TIME)
         time_str = DEFAULT_TIME
         if sound_active:
             sound.play()
@@ -144,12 +147,26 @@ def update_display(data: bytes):
     tore1_anzeige.config(text=anzeige.get('tore1', ""))
     tore2_anzeige.config(text=anzeige.get('tore2', ""))
     next_anzeige.config(text=anzeige.get('next', ""))
-    if anzeige.get("status"):
-        if anzeige["status"] == 2:
-            next_anzeige.grid()
+
+   # Zeile 3 (next_anzeige) nur dann reservieren, wenn Status == 2
+    if anzeige.get("status") == 2:
+        next_anzeige.grid()
+        # alte Werte aus deinem GUI-Setup wiederherstellen
+        root.grid_rowconfigure(3,
+            weight=2,
+            minsize=int(0.15 * screen_height)
+        )
     else:
         next_anzeige.grid_remove()
-        root.grid_rowconfigure(3, weight=1, minsize=0)   
+        # Zeile 3 komplett einklappen
+        root.grid_rowconfigure(3,
+            weight=0,
+            minsize=0
+        )
+    # sicherstellen, dass Kivy/Tkinter das Grid sofort neu berechnet
+    root.update_idletasks()
+
+
 
 def show():
     """Liest alle Pakete aus dem Socket, zeigt Overlay bei Timeout und schickt Broadcast."""
@@ -196,7 +213,10 @@ if not monitors:
     print("Keine Monitore gefunden, Standardwerte setzen ...")
     screen_width, screen_height = 800, 600
 else:
-    monitor = monitors[1]
+    try:
+        monitor = monitors[1]
+    except: 
+        monitor = monitors[0]
     screen_width = monitor.width
     screen_height = monitor.height
 if len(monitors) == 1:
